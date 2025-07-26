@@ -4,19 +4,19 @@ from WPA2Cracker import *
 def main():
     """
     MAIN EXECUTION FLOW:
-    1. Parse PCAP file to extract 4-way handshake
+    1. Parse capture file to extract 4-way handshake
     2. Read dictionary file with candidate passwords
     3. Perform dictionary attack to crack WPA2 password
     """
 
     # Configuration
-    pcap_file = "handshake.pcap"
-    ssid = "ikeriri-5g"
+    capture_file = "handshake2.cap"
+    ssid = "BUETCSE" # "ikeriri-5g"
     dictionary_file = "dictionary.txt"
 
     # Initialize cracker and extract handshake
-    cracker = WPA2Cracker(pcap_file, ssid)
-    print("🔍 Extracting handshake from PCAP...")
+    cracker = WPA2Cracker(capture_file, ssid)
+    print("🔍 Extracting handshake...")
 
     if not cracker.extract_handshake():
         print("❌ Handshake extraction failed")

