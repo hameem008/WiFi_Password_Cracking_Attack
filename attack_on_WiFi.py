@@ -10,7 +10,7 @@ def main():
     """
 
     # Configuration
-    capture_file = "keriri-5g.pcap"
+    capture_file = "ikeriri-5g.pcap"
     ssid = "ikeriri-5g"
     dictionary_file = "dictionary.txt"
 
