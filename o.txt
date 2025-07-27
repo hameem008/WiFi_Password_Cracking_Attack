@@ -1,3 +1,0 @@
-Description: Typical WPA2 PSK linked up process 
-(SSID is ikeriri-5g and passphrase is wireshark so you 
-may input wireshark:ikeriri-5g choosing wpa-pwd in decryption key settings in IEEE802.11 wireless LAN settings)

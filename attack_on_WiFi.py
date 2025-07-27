@@ -10,8 +10,8 @@ def main():
     """
 
     # Configuration
-    capture_file = "handshake2.cap"
-    ssid = "BUETCSE" # "ikeriri-5g"
+    capture_file = "keriri-5g.pcap"
+    ssid = "ikeriri-5g"
     dictionary_file = "dictionary.txt"
 
     # Initialize cracker and extract handshake

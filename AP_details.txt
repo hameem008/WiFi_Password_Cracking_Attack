@@ -1,0 +1,7 @@
+SSID: ikeriri-5g
+PASSWORD: wireshark
+CAPTURE: ikeriri-5g.pcap
+
+SSID: BUETCSE
+PASSWORD: 1stCSE@BUET
+CAPTURE: BUETCSE.cap
