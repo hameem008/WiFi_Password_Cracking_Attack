@@ -1,11 +1,14 @@
 SSID: ikeriri-5g
 PASSWORD: wireshark
 CAPTURE: ikeriri-5g.pcap
+SOURCE: https://wiki.wireshark.org/samplecaptures
 
 SSID: BUETCSE
 PASSWORD: 1stCSE@BUET
 CAPTURE: BUETCSE.cap
+SOURCE: From another group
 
 SSID: Ei j eta amar wifi
 PASSWORD: hehaheha
-CAPTURE: 
+CAPTURE: Ei j eta amar wifi.cap 
+SOURCE: Live capture
