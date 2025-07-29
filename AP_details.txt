@@ -5,3 +5,7 @@ CAPTURE: ikeriri-5g.pcap
 SSID: BUETCSE
 PASSWORD: 1stCSE@BUET
 CAPTURE: BUETCSE.cap
+
+SSID: Ei j eta amar wifi
+PASSWORD: hehaheha
+CAPTURE: 
