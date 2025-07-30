@@ -242,7 +242,9 @@ python3 prevention.py
 
 ---
 
-**Author**: [Your Name]  
-**Course**: [Course Name]  
-**Institution**: [Institution Name]  
-**Date**: [Date]
+**Author**: Awesh Islam, Hameem
+**Course**: CSE 406 Cyber Security Sessional 
+**Institution**: Bangladesh University of Engineering And Technology 
+**Date**: 30/07/2025
+
+Github Link: [[https://github.com/hameem008/WiFi_Password_Cracking_Attack]]
